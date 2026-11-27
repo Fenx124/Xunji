@@ -34,7 +34,12 @@ const validateConfirm = (_rule: unknown, value: string, callback: (err?: Error) 
 const rules: FormRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 32, message: '用户名长度为 3-32 位', trigger: 'blur' },
+    { min: 3, max: 50, message: '用户名长度为 3-50 位', trigger: 'blur' },
+    {
+      pattern: /^[A-Za-z0-9_]+$/,
+      message: '用户名只能包含字母、数字和下划线',
+      trigger: 'blur',
+    },
   ],
   nickname: [
     { required: true, message: '请输入昵称', trigger: 'blur' },
@@ -85,7 +90,7 @@ async function submit() {
         @keyup.enter="submit"
       >
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="3-32 位，登录使用" clearable />
+          <el-input v-model="form.username" placeholder="字母、数字或下划线，3-50 位" clearable />
         </el-form-item>
         <el-form-item label="昵称" prop="nickname">
           <el-input v-model="form.nickname" placeholder="展示名称" clearable />

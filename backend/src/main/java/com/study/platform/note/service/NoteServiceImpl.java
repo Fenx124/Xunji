@@ -131,15 +131,18 @@ public class NoteServiceImpl implements NoteService {
     public NoteDetailVO detail(Long id) {
         Long userId = SecurityUtils.getUserId();
         NoteCoreCache cached = readCache(id);
-        if (cached != null) {
+        // 回收站笔记不进热点缓存。缓存里只留未删除版本，避免把已删除正文当成正常笔记。
+        if (cached != null && cached.deletedAt() == null) {
             if (!userId.equals(cached.userId())) {
                 throw new BusinessException(ErrorCode.FORBIDDEN, "无权访问该笔记");
             }
             return toDetail(cached, loadSchedules(userId, id));
         }
-        Note note = requireActiveOwned(id, userId);
+        Note note = requireVisible(id, userId);
         NoteCoreCache fresh = buildCore(note);
-        writeCache(fresh);
+        if (!note.inTrash()) {
+            writeCache(fresh);
+        }
         return toDetail(fresh, loadSchedules(userId, id));
     }
 

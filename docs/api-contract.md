@@ -65,7 +65,7 @@
 
 | 方法 | 路径 | 权限 | 说明 |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/auth/register` | 公开 | 用户注册（默认赋予 `USER` 角色） |
+| `POST` | `/auth/register` | 公开 | 用户注册（用户名 3–50 位，仅字母、数字、下划线；默认赋予 `USER` 角色） |
 | `POST` | `/auth/login` | 公开 | 登录，返回 `accessToken` 与用户基础信息（含 `roles`） |
 | `POST` | `/auth/logout` | 登录 | 注销，将当前 JWT 的 `jti` 写入 Redis 黑名单 |
 | `GET` | `/auth/me` | 登录 | 获取当前登录用户信息与角色列表 |
@@ -114,7 +114,7 @@
 | 方法 | 路径 | 说明 |
 | :--- | :--- | :--- |
 | `GET` | `/notes` | 分页查询笔记（query: `notebookId`, `tagId`, `keyword`[MySQL `FULLTEXT` ngram], `isFavorite`, `pageNum=1`, `pageSize=20`）→ `PageResult<NoteListItemVO>` |
-| `GET` | `/notes/{id}` | 获取笔记详情（走 Redis Cache-Aside `note:detail:{noteId}`，含 `tags` 与 `relatedSchedules`）→ `NoteDetailVO` |
+| `GET` | `/notes/{id}` | 获取笔记详情（含 `tags` 与 `relatedSchedules`）。未删除笔记走 Redis Cache-Aside `note:detail:{noteId}`；回收站笔记直接读库且不写入该缓存 → `NoteDetailVO` |
 | `POST` | `/notes` | 新建笔记 `{ notebookId?, title, content, tagIds?, isPinned?, isFavorite? }` → `NoteDetailVO` |
 | `PUT` | `/notes/{id}` | 更新笔记 `{ notebookId?, title, content, tagIds?, isPinned?, isFavorite?, version }`（带 `version` 乐观锁校验，冲突返 `40901`；事务更新 `note_tag` 并删除 Redis 缓存）→ `NoteDetailVO` |
 | `PATCH` | `/notes/{id}/pin` | 切换置顶状态（可选体 `{ isPinned?: boolean }`，缺省则取反）→ `{ id, isPinned, isFavorite }` |
