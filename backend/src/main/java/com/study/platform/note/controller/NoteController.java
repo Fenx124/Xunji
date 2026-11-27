@@ -10,6 +10,8 @@ import com.study.platform.note.dto.NoteUpdateRequest;
 import com.study.platform.note.service.NoteService;
 import com.study.platform.note.vo.NoteDetailVO;
 import com.study.platform.note.vo.NoteFlagVO;
+import com.study.platform.note.vo.NoteHistoryDetailVO;
+import com.study.platform.note.vo.NoteHistoryItemVO;
 import com.study.platform.note.vo.NoteListItemVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @Tag(name = "笔记")
 @RestController
@@ -73,6 +77,24 @@ public class NoteController {
     @PutMapping(value = "/{id:\\d+}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public Result<NoteDetailVO> update(@PathVariable Long id, @Valid @RequestBody NoteUpdateRequest request) {
         return Result.ok(noteService.update(id, request));
+    }
+
+    @Operation(summary = "笔记历史快照列表")
+    @GetMapping(value = "/{id:\\d+}/history", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Result<List<NoteHistoryItemVO>> history(@PathVariable Long id) {
+        return Result.ok(noteService.listHistory(id));
+    }
+
+    @Operation(summary = "笔记历史快照全文")
+    @GetMapping(value = "/{id:\\d+}/history/{historyId:\\d+}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Result<NoteHistoryDetailVO> historyDetail(@PathVariable Long id, @PathVariable Long historyId) {
+        return Result.ok(noteService.historyDetail(id, historyId));
+    }
+
+    @Operation(summary = "回滚到历史快照")
+    @PostMapping(value = "/{id:\\d+}/history/{historyId:\\d+}/restore", produces = MediaType.APPLICATION_JSON_VALUE)
+    public Result<NoteDetailVO> restoreHistory(@PathVariable Long id, @PathVariable Long historyId) {
+        return Result.ok(noteService.restoreHistory(id, historyId));
     }
 
     @Operation(summary = "切换或设置置顶")

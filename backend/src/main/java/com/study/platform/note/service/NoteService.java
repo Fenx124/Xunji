@@ -5,7 +5,11 @@ import com.study.platform.note.dto.NoteCreateRequest;
 import com.study.platform.note.dto.NoteUpdateRequest;
 import com.study.platform.note.vo.NoteDetailVO;
 import com.study.platform.note.vo.NoteFlagVO;
+import com.study.platform.note.vo.NoteHistoryDetailVO;
+import com.study.platform.note.vo.NoteHistoryItemVO;
 import com.study.platform.note.vo.NoteListItemVO;
+
+import java.util.List;
 
 public interface NoteService {
 
@@ -17,6 +21,12 @@ public interface NoteService {
     NoteDetailVO create(NoteCreateRequest request);
 
     NoteDetailVO update(Long id, NoteUpdateRequest request);
+
+    List<NoteHistoryItemVO> listHistory(Long noteId);
+
+    NoteHistoryDetailVO historyDetail(Long noteId, Long historyId);
+
+    NoteDetailVO restoreHistory(Long noteId, Long historyId);
 
     NoteFlagVO pin(Long id, Boolean isPinned);
 

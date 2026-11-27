@@ -12,8 +12,10 @@ import com.study.platform.common.exception.BusinessException;
 import com.study.platform.note.dto.NoteCreateRequest;
 import com.study.platform.note.dto.NoteUpdateRequest;
 import com.study.platform.note.entity.Note;
+import com.study.platform.note.entity.NoteHistory;
 import com.study.platform.note.entity.Notebook;
 import com.study.platform.note.entity.Tag;
+import com.study.platform.note.mapper.NoteHistoryMapper;
 import com.study.platform.note.mapper.NoteMapper;
 import com.study.platform.note.mapper.NoteSearchQuery;
 import com.study.platform.note.mapper.NoteTagMapper;
@@ -21,12 +23,15 @@ import com.study.platform.note.mapper.NoteTagRow;
 import com.study.platform.note.mapper.NotebookMapper;
 import com.study.platform.note.mapper.TagMapper;
 import com.study.platform.note.support.NotebookNames;
+import com.study.platform.note.support.NoteHistoryRules;
 import com.study.platform.note.support.NoteFlags;
 import com.study.platform.note.support.NoteKeyword;
 import com.study.platform.note.support.NotePageQuery;
 import com.study.platform.note.support.NoteWordCounter;
 import com.study.platform.note.vo.NoteDetailVO;
 import com.study.platform.note.vo.NoteFlagVO;
+import com.study.platform.note.vo.NoteHistoryDetailVO;
+import com.study.platform.note.vo.NoteHistoryItemVO;
 import com.study.platform.note.vo.NoteListItemVO;
 import com.study.platform.note.vo.TagSimpleVO;
 import com.study.platform.schedule.service.ScheduleLinkQueryService;
@@ -56,6 +61,7 @@ public class NoteServiceImpl implements NoteService {
     static final String VERSION_CONFLICT = "笔记已被其他窗口修改，请刷新后重试";
 
     private final NoteMapper noteMapper;
+    private final NoteHistoryMapper noteHistoryMapper;
     private final NotebookMapper notebookMapper;
     private final TagMapper tagMapper;
     private final NoteTagMapper noteTagMapper;
@@ -64,6 +70,7 @@ public class NoteServiceImpl implements NoteService {
     private final ObjectMapper objectMapper;
 
     public NoteServiceImpl(NoteMapper noteMapper,
+                           NoteHistoryMapper noteHistoryMapper,
                            NotebookMapper notebookMapper,
                            TagMapper tagMapper,
                            NoteTagMapper noteTagMapper,
@@ -71,6 +78,7 @@ public class NoteServiceImpl implements NoteService {
                            StringRedisTemplate stringRedisTemplate,
                            ObjectMapper objectMapper) {
         this.noteMapper = noteMapper;
+        this.noteHistoryMapper = noteHistoryMapper;
         this.notebookMapper = notebookMapper;
         this.tagMapper = tagMapper;
         this.noteTagMapper = noteTagMapper;
@@ -163,6 +171,8 @@ public class NoteServiceImpl implements NoteService {
 
     /**
      * 乐观锁：客户端 version 不一致，或并发更新导致影响行数为 0，都返回 40901。
+     * 标题或正文相对库中值有变化时，先把旧内容写入 note_history，再更新笔记。
+     * 只改置顶、收藏、标签或笔记本时不写快照。新建笔记不走这里。
      * note_tag 在同一事务里按请求全量替换。
      */
     @Override
@@ -179,11 +189,16 @@ public class NoteServiceImpl implements NoteService {
         }
         List<Long> tagIds = normalizeIds(request.tagIds());
         requireTags(userId, tagIds);
+        String nextTitle = NoteHistoryRules.persistedTitle(request.title());
+        if (NoteHistoryRules.needsSnapshot(existing.getTitle(), existing.getContent(), nextTitle, request.content())) {
+            insertSnapshot(id, userId, existing.getVersion(), existing.getTitle(), existing.getContent(),
+                    NoteHistoryRules.CHANGE_BEFORE_SAVE);
+        }
         LambdaUpdateWrapper<Note> wrapper = new LambdaUpdateWrapper<Note>()
                 .eq(Note::getId, id)
                 .eq(Note::getUserId, userId)
                 .eq(Note::getVersion, request.version())
-                .set(Note::getTitle, request.title().trim())
+                .set(Note::getTitle, nextTitle)
                 .set(Note::getContent, request.content())
                 .set(Note::getWordCount, NoteWordCounter.countNonWhitespace(request.content()))
                 .set(Note::getVersion, request.version() + 1);
@@ -204,6 +219,62 @@ public class NoteServiceImpl implements NoteService {
             evictDashboard(userId);
         });
         return assembleActive(id, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<NoteHistoryItemVO> listHistory(Long noteId) {
+        Long userId = SecurityUtils.getUserId();
+        requireActiveOwned(noteId, userId);
+        List<NoteHistory> rows = noteHistoryMapper.selectItemsByNoteId(noteId, NoteHistoryRules.KEEP);
+        if (rows == null || rows.isEmpty()) {
+            return List.of();
+        }
+        List<NoteHistoryItemVO> items = new ArrayList<>(rows.size());
+        for (NoteHistory row : rows) {
+            items.add(toHistoryItem(row));
+        }
+        return items;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public NoteHistoryDetailVO historyDetail(Long noteId, Long historyId) {
+        Long userId = SecurityUtils.getUserId();
+        requireActiveOwned(noteId, userId);
+        return toHistoryDetail(requireHistory(noteId, historyId));
+    }
+
+    /**
+     * 回滚前先把当前标题和正文再存一条，避免覆盖后找不回来。
+     * version 按库中当前值加 1，不要求客户端回传旧版本。
+     * 并发把版本改掉时整段回滚，并返回 40901。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public NoteDetailVO restoreHistory(Long noteId, Long historyId) {
+        Long userId = SecurityUtils.getUserId();
+        Note existing = requireActiveOwned(noteId, userId);
+        NoteHistory snapshot = requireHistory(noteId, historyId);
+        insertSnapshot(noteId, userId, existing.getVersion(), existing.getTitle(), existing.getContent(),
+                NoteHistoryRules.CHANGE_BEFORE_RESTORE);
+        LambdaUpdateWrapper<Note> wrapper = new LambdaUpdateWrapper<Note>()
+                .eq(Note::getId, noteId)
+                .eq(Note::getUserId, userId)
+                .eq(Note::getVersion, existing.getVersion())
+                .set(Note::getTitle, snapshot.getTitle())
+                .set(Note::getContent, snapshot.getContent())
+                .set(Note::getWordCount, NoteWordCounter.countNonWhitespace(snapshot.getContent()))
+                .set(Note::getVersion, existing.getVersion() + 1);
+        int rows = noteMapper.update(wrapper);
+        if (rows == 0) {
+            throw new BusinessException(ErrorCode.CONFLICT, VERSION_CONFLICT);
+        }
+        AfterCommit.run(() -> {
+            evictNote(noteId);
+            evictDashboard(userId);
+        });
+        return assembleActive(noteId, userId);
     }
 
     @Override
@@ -302,6 +373,58 @@ public class NoteServiceImpl implements NoteService {
             throw new BusinessException(ErrorCode.NOT_FOUND, "笔记不存在");
         }
         return new NoteFlagVO(fresh.getId(), NoteFlags.isOn(fresh.getIsPinned()), NoteFlags.isOn(fresh.getIsFavorite()));
+    }
+
+    private void insertSnapshot(Long noteId, Long userId, Integer versionNo, String title, String content,
+                                String changeNote) {
+        NoteHistory row = new NoteHistory();
+        row.setNoteId(noteId);
+        row.setUserId(userId);
+        row.setVersionNo(versionNo);
+        row.setTitle(title == null ? "" : title);
+        row.setContent(content == null ? "" : content);
+        row.setChangeNote(changeNote);
+        noteHistoryMapper.insert(row);
+        trimHistory(noteId);
+    }
+
+    private void trimHistory(Long noteId) {
+        List<Long> extras = NoteHistoryRules.idsBeyondKeep(noteHistoryMapper.selectIdsByNoteIdDesc(noteId));
+        if (extras.isEmpty()) {
+            return;
+        }
+        noteHistoryMapper.delete(new LambdaQueryWrapper<NoteHistory>().in(NoteHistory::getId, extras));
+    }
+
+    private NoteHistory requireHistory(Long noteId, Long historyId) {
+        NoteHistory row = noteHistoryMapper.selectById(historyId);
+        if (row == null || !noteId.equals(row.getNoteId())) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "历史版本不存在");
+        }
+        return row;
+    }
+
+    private NoteHistoryItemVO toHistoryItem(NoteHistory row) {
+        return new NoteHistoryItemVO(
+                row.getId(),
+                row.getNoteId(),
+                row.getVersionNo(),
+                row.getTitle(),
+                row.getChangeNote(),
+                row.getCreatedAt()
+        );
+    }
+
+    private NoteHistoryDetailVO toHistoryDetail(NoteHistory row) {
+        return new NoteHistoryDetailVO(
+                row.getId(),
+                row.getNoteId(),
+                row.getVersionNo(),
+                row.getTitle(),
+                row.getChangeNote(),
+                row.getCreatedAt(),
+                row.getContent()
+        );
     }
 
     private NoteDetailVO assembleActive(Long noteId, Long userId) {

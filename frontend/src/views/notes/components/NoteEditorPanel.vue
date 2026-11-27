@@ -4,7 +4,18 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
-import { Calendar, ChatDotRound, Delete, Download, MagicStick, Star, StarFilled, Top } from '@element-plus/icons-vue'
+import {
+  Calendar,
+  ChatDotRound,
+  Clock,
+  Delete,
+  Download,
+  MagicStick,
+  Star,
+  StarFilled,
+  Top,
+} from '@element-plus/icons-vue'
+import NoteHistoryDrawer from './NoteHistoryDrawer.vue'
 import { summarizeNote } from '@/api/ai'
 import { createTag } from '@/api/note'
 import type { NoteDetailVO, NotebookVO, TagVO } from '@/types/note'
@@ -27,6 +38,7 @@ const emit = defineEmits<{
   deleted: []
   pinFavoriteChanged: []
   reload: []
+  restored: [note: NoteDetailVO]
   'tags-changed': []
 }>()
 
@@ -43,6 +55,9 @@ const summarizing = ref(false)
 const latestSummary = ref<string | null>(null)
 const summaryFallback = ref(false)
 const suggestedTags = ref<string[]>([])
+const historyOpen = ref(false)
+
+const canShowHistory = computed(() => props.note != null && props.note.id > 0)
 
 const tagOptions = computed(() => props.tags.map((t) => ({ value: t.id, label: t.name })))
 const relatedSchedules = computed(() => props.note?.relatedSchedules ?? [])
@@ -192,6 +207,10 @@ async function onEbbinghaus() {
 function goSchedule() {
   router.push('/schedules')
 }
+
+function onHistoryRestored(note: NoteDetailVO) {
+  emit('restored', note)
+}
 </script>
 
 <template>
@@ -222,6 +241,9 @@ function goSchedule() {
           <el-icon><component :is="isFavorite ? StarFilled : Star" /></el-icon>
         </el-button>
         <el-button type="primary" :loading="saving" @click="save">保存</el-button>
+        <el-button :icon="Clock" :disabled="!canShowHistory" @click="historyOpen = true">
+          历史版本
+        </el-button>
         <el-button :icon="MagicStick" :loading="summarizing" @click="onAiSummarize">
           AI 摘要与标签
         </el-button>
@@ -277,6 +299,14 @@ function goSchedule() {
         preview-theme="github"
         code-theme="atom"
         class="md-editor"
+      />
+
+      <NoteHistoryDrawer
+        v-model="historyOpen"
+        :note-id="note?.id ?? null"
+        :current-title="title"
+        :current-content="content"
+        @restored="onHistoryRestored"
       />
     </template>
   </section>

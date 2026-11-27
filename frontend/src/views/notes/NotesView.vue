@@ -139,6 +139,12 @@ function onNoteSaved(note: NoteDetailVO) {
   loadMeta()
 }
 
+function onNoteRestored(note: NoteDetailVO) {
+  currentNote.value = note
+  loadNotes()
+  loadMeta()
+}
+
 async function onReloadNote() {
   if (currentNote.value) await openNote(currentNote.value.id)
 }
@@ -216,6 +222,7 @@ watch(
       :tags="tags"
       :readonly="editorReadonly"
       @saved="onNoteSaved"
+      @restored="onNoteRestored"
       @deleted="onNoteDeleted"
       @pin-favorite-changed="loadNotes"
       @reload="onReloadNote"

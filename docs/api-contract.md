@@ -130,6 +130,22 @@
 - `NoteListItemVO`：`{ id, notebookId, notebookName, title, aiSummary, isPinned, isFavorite, wordCount, version, tags: TagSimpleVO[], deletedAt, createdAt, updatedAt }`（`isPinned`/`isFavorite` 为 `boolean`）
 - `NoteDetailVO`：在 `NoteListItemVO` 基础上增加 `content` 与 `relatedSchedules: ScheduleBriefVO[]`
 
+### 3.4 笔记历史版本（P2）
+
+保存笔记时，若标题或正文相对当前库中的值有变化，先把**旧标题和旧正文**写入 `note_history`，再更新笔记。每篇笔记只保留最近 **10** 条快照。只改置顶、收藏或标签时不产生快照。回滚前也会把当前正文再存一条，避免回滚不可逆。
+
+| 方法 | 路径 | 说明 |
+| :--- | :--- | :--- |
+| `GET` | `/notes/{id}/history` | 当前用户该笔记的快照列表，按 `versionNo` 降序，最多 10 条 → `NoteHistoryItemVO[]` |
+| `GET` | `/notes/{id}/history/{historyId}` | 单条快照全文，供前端做差异对比 → `NoteHistoryDetailVO` |
+| `POST` | `/notes/{id}/history/{historyId}/restore` | 用该快照覆盖当前标题和正文，笔记 `version` 加 1，并失效笔记详情缓存 → `NoteDetailVO` |
+
+**字段约定**：
+- `NoteHistoryItemVO`：`{ id, noteId, versionNo, title, changeNote, createdAt }`（列表不含正文）
+- `NoteHistoryDetailVO`：`NoteHistoryItemVO` 加上 `content`
+- 快照 `versionNo` 等于被替换掉的那一版 `note.version`
+- 归属失败：笔记不存在 `40401`，不是当前用户 `40301`，快照不属于该笔记 `40401`
+
 ---
 
 ## 4. M3 日程中心（P0）

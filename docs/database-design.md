@@ -37,7 +37,7 @@ erDiagram
   NOTE ||--o{ NOTE_HISTORY : snapshots
 ```
 
-`NOTE_HISTORY` 已建表，应用尚未写入，属于 P2。`SYS_AUDIT_LOG` 只冗余 `user_id` 与用户名快照，不设外键，避免用户删除或匿名登录失败把审计记录级联掉。
+`NOTE_HISTORY` 保存笔记标题或正文被替换前的快照，每篇最多 10 条。`SYS_AUDIT_LOG` 只冗余 `user_id` 与用户名快照，不设外键，避免用户删除或匿名登录失败把审计记录级联掉。
 
 ## 3. 逻辑结构与范式
 
@@ -56,7 +56,7 @@ erDiagram
 | `focus_record` | `id` | 可空笔记、可空日程 | 3NF |
 | `ai_chat_log` | `id` | 一次模型调用的提问、回答、耗时、成败 | 3NF |
 | `sys_audit_log` | `id` | AOP 操作流水 | 用户名是快照 |
-| `note_history` | `id` | 预留的正文快照 | 3NF，未启用 |
+| `note_history` | `id` | 正文变更前的快照，`version_no` 为被替换的笔记版本 | 3NF |
 
 ### 3.1 满足 3NF 的部分
 

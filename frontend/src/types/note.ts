@@ -112,3 +112,18 @@ export interface UpdateTagRequest {
   name: string
   color?: string | null
 }
+
+/** §3.4 笔记历史快照列表项（不含正文） */
+export interface NoteHistoryItemVO {
+  id: number
+  noteId: number
+  versionNo: number
+  title: string
+  changeNote: string | null
+  createdAt: string
+}
+
+/** §3.4 单条快照全文（供差异对比） */
+export interface NoteHistoryDetailVO extends NoteHistoryItemVO {
+  content: string
+}

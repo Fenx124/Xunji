@@ -82,4 +82,4 @@
   - [x] `docs/architecture.md`：C4 上下文/容器、模块化单体包边界、JWT、Cache-Aside、AI SSE 时序、质量属性战术与 ADR-001～007。
   - [x] `docs/database-design.md`：E-R、3NF 与有意反范式、索引与事务、Redis 一致性；配套 `sql/explain-lab.sql`（约 10000 行后的三组 `EXPLAIN`，需在本机手动执行并截图）。
   - [x] `scripts/start-local.ps1`、`scripts/stop-local.ps1` 与 `docs/demo.md`（8 分钟答辩顺序）。
-  - [ ] （可选 P2）**O1 笔记历史版本快照**仍未做。`note_history` 只建了表，需要时再实现。
+  - [x] **O1 笔记历史版本**（2026-11-27）：标题或正文变化时写入 `note_history`，每篇保留最近 10 条；提供列表、全文和恢复接口。前端在编辑器中做行级差异并一键恢复。后端 `mvn test` 53/53 通过，前端 `npm run build` 通过。图片对象存储和周期性日程仍不在本期范围。

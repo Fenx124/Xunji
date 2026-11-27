@@ -5,6 +5,8 @@ import type {
   CreateNoteRequest,
   CreateTagRequest,
   NoteDetailVO,
+  NoteHistoryDetailVO,
+  NoteHistoryItemVO,
   NoteListItemVO,
   NotePinFavoriteResult,
   NoteQueryParams,
@@ -89,4 +91,16 @@ export function restoreNote(id: number) {
 
 export function permanentDeleteNote(id: number) {
   return request.delete<unknown, Result<null>>(`/notes/${id}/permanent`)
+}
+
+export function listNoteHistory(noteId: number) {
+  return request.get<unknown, Result<NoteHistoryItemVO[]>>(`/notes/${noteId}/history`)
+}
+
+export function getNoteHistory(noteId: number, historyId: number) {
+  return request.get<unknown, Result<NoteHistoryDetailVO>>(`/notes/${noteId}/history/${historyId}`)
+}
+
+export function restoreNoteHistory(noteId: number, historyId: number) {
+  return request.post<unknown, Result<NoteDetailVO>>(`/notes/${noteId}/history/${historyId}/restore`)
 }
