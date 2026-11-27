@@ -66,7 +66,9 @@ request.interceptors.response.use(
       return Promise.reject(error)
     }
     if (status === 403 || body?.code === 40301) {
-      ElMessage.warning(body?.message || '无权限访问')
+      const raw = typeof body === 'string' ? body : body?.message
+      const message = raw === 'Invalid CORS request' ? '页面来源未被后端允许，请用 localhost:5173 或 127.0.0.1:5173 打开' : raw
+      ElMessage.warning(message || '无权限访问')
       return Promise.reject(error)
     }
     ElMessage.error(body?.message || error.message || '网络异常，请稍后重试')
