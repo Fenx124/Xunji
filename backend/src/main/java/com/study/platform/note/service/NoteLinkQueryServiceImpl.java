@@ -41,7 +41,8 @@ public class NoteLinkQueryServiceImpl implements NoteLinkQueryService {
     @Transactional(readOnly = true)
     public Map<Long, String> findTitles(Long userId, Collection<Long> noteIds) {
         if (userId == null || noteIds == null || noteIds.isEmpty()) {
-            return Map.of();
+            // 不用 Map.of()：调用方会用 noteId=null 去取“未关联笔记”，Map.of().get(null) 会 NPE。
+            return new HashMap<>();
         }
         Map<Long, String> titles = new HashMap<>();
         for (NoteTitleRow row : noteMapper.selectTitles(userId, noteIds)) {

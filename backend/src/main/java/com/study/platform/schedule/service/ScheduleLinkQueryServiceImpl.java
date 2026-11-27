@@ -70,7 +70,8 @@ public class ScheduleLinkQueryServiceImpl implements ScheduleLinkQueryService {
     @Transactional(readOnly = true)
     public Map<Long, String> findTitles(Long userId, Collection<Long> scheduleIds) {
         if (userId == null || scheduleIds == null || scheduleIds.isEmpty()) {
-            return Map.of();
+            // 不用 Map.of()：调用方会用 null id 查找，Map.of().get(null) 会 NPE。
+            return new HashMap<>();
         }
         Map<Long, String> titles = new HashMap<>();
         for (ScheduleTitleRow row : scheduleMapper.selectTitles(userId, scheduleIds)) {

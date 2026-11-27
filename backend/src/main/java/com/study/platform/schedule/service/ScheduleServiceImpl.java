@@ -273,7 +273,10 @@ public class ScheduleServiceImpl implements ScheduleService {
         Map<Long, String> titles = noteLinkQueryService.findTitles(userId, noteIds);
         List<ScheduleVO> result = new ArrayList<>(schedules.size());
         for (Schedule schedule : schedules) {
-            result.add(toVo(schedule, titles.get(schedule.getNoteId())));
+            // 未关联笔记时 noteId 为 null。Map.of() 不允许 get(null)，这里直接跳过查找。
+            Long noteId = schedule.getNoteId();
+            String noteTitle = noteId == null ? null : titles.get(noteId);
+            result.add(toVo(schedule, noteTitle));
         }
         return result;
     }
