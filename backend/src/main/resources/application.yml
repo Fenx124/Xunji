@@ -1,0 +1,106 @@
+# 敏感项全部来自环境变量，缺省值仅对齐 .env.example / docker-compose 的本地开发口令。
+# 生产或答辩部署必须覆盖 JWT_SECRET、数据库口令、Redis 口令与管理员初始密码，禁止写入真实 API Key。
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+spring:
+  application:
+    name: smart-study-platform
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
+  datasource:
+    url: "jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:smart_study}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false"
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_ROOT_PASSWORD:smartstudy_root_123}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: smart-study-hikari
+      # 数据库暂时不可达时仍允许进程启动，由 AdminInitializer 记录警告而不是中断启动
+      initialization-fail-timeout: -1
+      maximum-pool-size: 10
+      minimum-idle: 0
+      connection-timeout: 5000
+  sql:
+    init:
+      # 表结构以仓库 sql/schema.sql 为唯一来源，应用启动不执行 DDL
+      mode: never
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:smartstudy_redis_123}
+      timeout: 3s
+      connect-timeout: 3s
+  mail:
+    host: ${MAIL_HOST:smtp.qq.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+      # 全局逻辑删除：1 已删除，0 未删除。没有 deleted 字段的表不受影响
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-this-to-a-secure-256bit-secret-key-for-smart-study-platform}
+    expire-hours: ${JWT_EXPIRE_HOURS:24}
+  init-admin:
+    username: ${INIT_ADMIN_USERNAME:admin}
+    password: ${INIT_ADMIN_PASSWORD:Admin@123456}
+  ai:
+    provider: ${AI_PROVIDER:deepseek}
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
+    api-key: ${DEEPSEEK_API_KEY:}
+    model: ${DEEPSEEK_MODEL:deepseek-chat}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:30}
+    # 未配置 Key 或远程超时时走本地规则，响应里标记 fallback=true
+    fallback-enabled: ${AI_FALLBACK_ENABLED:true}
+    rate-limit-per-minute: ${AI_RATE_LIMIT_PER_MINUTE:6}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+  schedule:
+    # false 时不注册提醒任务。测试配置会关掉它，避免上下文启动后空转扫描数据库。
+    enabled: ${APP_SCHEDULE_ENABLED:true}
+    remind-interval-ms: ${APP_SCHEDULE_REMIND_INTERVAL_MS:60000}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.study.platform: info

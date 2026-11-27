@@ -1,0 +1,42 @@
+# OS & Editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+*.iml
+.vscode/
+!.vscode/extensions.json
+
+# Environment & Secrets (NEVER commit API keys or DB passwords)
+.env
+.env.local
+.env.*.local
+application-local.yml
+application-local.yaml
+application-secret.yml
+
+# Java / Maven / Gradle (backend)
+backend/target/
+backend/build/
+backend/.gradle/
+backend/out/
+*.class
+*.jar
+*.war
+*.log
+
+# Node / Vite / Vue (frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Docker local volumes & uploads
+docker/data/
+uploads/
+
+# Local Redis snapshot
+dump.rdb

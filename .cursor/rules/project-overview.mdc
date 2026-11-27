@@ -1,0 +1,15 @@
+---
+description: Core architecture, scope boundaries, and security guardrails for Smart Study Platform
+alwaysApply: true
+---
+
+# Smart Study Platform 全局约束
+
+- **严格遵守范围红线**：所有功能开发以 `docs/requirements.md` 为准；严禁实现 Out-of-Scope（如多人协同、社区广场、全库向量 RAG、微服务拆分）。
+- **准确区分存储职责**：
+  - MySQL 8.0 为关系型主存储（事务、范式关联、全文检索）。
+  - Redis 为非关系型内存缓存/限流/Token 状态存储，采用 Cache-Aside 策略保证一致性。
+- **密钥与安全红线**：
+  - 严禁硬编码任何数据库密码、JWT Secret、SMTP 密码或 DeepSeek/OpenAI API Key。
+  - 所有敏感配置统一使用环境变量占位符（如 `${DEEPSEEK_API_KEY:}`），本地值仅放于被 `.gitignore` 忽略的 `.env` 或 `application-local.yml`。
+- **课程可展示性优先**：代码结构保持清晰可读，关键设计（事务、缓存、限流、AOP、AI 降级）需留有简洁中文注释，方便写入课程与软件体系结构报告。

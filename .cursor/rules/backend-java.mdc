@@ -1,0 +1,25 @@
+---
+description: Spring Boot 3 backend coding standards, modular package boundaries, and API conventions
+globs: backend/**/*
+alwaysApply: false
+---
+
+# 后端开发规范（Spring Boot 3 + MyBatis-Plus）
+
+## 模块化单体分包
+
+在根包 `com.study.platform` 下严格按业务域组织，禁止跨模块直接访问对方 Mapper（应通过 Service 接口调用）：
+- `common/`：统一返回体 `Result<T>`、全局异常 `GlobalExceptionHandler`、错误码枚举、分页封装、AOP 审计注解、Redis 限流注解
+- `auth/`：登录注册、JWT 工具、Redis Token 黑名单、RBAC 权限拦截
+- `note/`：笔记本、Markdown 笔记、标签、全文检索、回收站（预留 P2 历史版本扩展点）
+- `schedule/`：日程 CRUD、笔记双向关联、艾宾浩斯复习日程批量生成、临期邮件提醒
+- `focus/`：番茄钟专注记录落库与统计
+- `ai/`：`AiProvider` 统一适配接口、DeepSeek/OpenAI 兼容实现、SSE 流式问答、自然语言建日程 JSON 解析与降级
+- `system/`：管理员用户/角色管理、AI 用量监控、AOP 审计日志查询
+
+## 接口与数据规范
+
+- 构建工具使用 **Maven**，本机当前为 **JDK 26**，请设置 `<maven.compiler.release>21</maven.compiler.release>` 并选用兼容高版本 JDK 的 Spring Boot 3.5.x 与最新 Lombok（或优先用 Java `record` / 显式代码，务必运行 `mvn compile` 验证通过）。
+- 所有非流式接口统一返回 `Result<T>`（`code`、`message`、`data`、`timestamp`），流式问答使用 `SseEmitter` 或 `Flux<ServerSentEvent<String>>`。
+- 写操作涉及多表变更（如删除笔记本、艾宾浩斯批量生成、更新笔记标签）必须添加 `@Transactional(rollbackFor = Exception.class)`。
+- 密码必须使用 BCrypt 加密存储；所有接口需做数据归属校验（防止普通用户越权读写他人笔记/日程/专注记录）。

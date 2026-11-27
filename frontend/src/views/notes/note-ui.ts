@@ -1,0 +1,1 @@
+export type SidebarFilter = 'all' | 'favorite' | 'trash'

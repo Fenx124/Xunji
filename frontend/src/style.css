@@ -1,0 +1,66 @@
+:root {
+  --ssp-bg: #f4f6f9;
+  --ssp-surface: #ffffff;
+  --ssp-text: #1f2937;
+  --ssp-muted: #6b7280;
+  --ssp-primary: #2563eb;
+  --ssp-border: #e5e7eb;
+  --ssp-sidebar: #0f172a;
+  --ssp-sidebar-text: #cbd5e1;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
+  font-family:
+    'Segoe UI',
+    'PingFang SC',
+    'Microsoft YaHei',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--ssp-text);
+  background: var(--ssp-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--ssp-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.page-shell {
+  padding: 20px 24px;
+}
+
+.placeholder-card {
+  max-width: 640px;
+  margin-top: 16px;
+  border-radius: 12px;
+  border: 1px dashed var(--ssp-border);
+  background: var(--ssp-surface);
+  padding: 24px;
+}
+
+.placeholder-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+}
+
+.placeholder-card p {
+  margin: 0;
+  color: var(--ssp-muted);
+  line-height: 1.6;
+}
